@@ -102,5 +102,28 @@ module.exports = {
       createdAt: createdPost.createdAt.toISOString(),
       updatedAt: createdPost.updatedAt.toISOString()
     }
+  },
+  posts: async (req) => {
+    if(!req.isAuth){
+      const error = new Error('Unauthorized, access denied')
+      error.code = 401
+      throw error
+    }
+    const totalPosts = await Post.find().countDocuments()
+    const posts = await Post.find()
+      .sort({ createdAt: -1 })
+      .populate('creator')
+
+    return {
+      posts: posts.map(post => {
+        return {
+          ...post._doc,
+          _id: post._id.toString(),
+          createdAt: post.createdAt.toString(),
+          updatedAt: post.updatedAt.toString()
+        }
+      }),
+      totalPosts
+    }
   }
 }
