@@ -60,14 +60,15 @@ module.exports = {
       userId: user._id.toString()
     }
   },
-  createPost: async ({postInput: {title, content, imageUrl}}) => {
+  createPost: async ({postInput: {title, content, imageUrl}}, req) => {
+    //console.log('Request Entered AUTH', token, decodedToken)
     if(!req.isAuth){
       const error = new Error('Unauthorized, access denied')
       error.code = 401
       throw error
     }
     const errors = []
-
+    console.log('Request Entered 2')
     if(validator.isEmpty(title))
       errors.push({ message: 'Invalid Title'})
 
@@ -94,6 +95,7 @@ module.exports = {
     })
     const createdPost = await post.save()
     user.posts.push(createdPost)
+    await user.save()
     return {
       ...createdPost._doc,
       _id: createdPost._id,
