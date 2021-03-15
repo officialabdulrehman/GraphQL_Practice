@@ -7,6 +7,7 @@ const multer = require('multer');
 const {graphqlHTTP} = require('express-graphql');
 const graphqlSchema = require('./graphql/schema');
 const graphqlResolver = require('./graphql/resolvers');
+const isAuth = require('./middleware/is-auth');
 require('dotenv').config()
 const app = express();
 
@@ -49,6 +50,8 @@ app.use((req, res, next) => {
     return res.sendStatus(200)
   next();
 });
+
+app.use(is-isAuth)
 
 app.use('/graphql', graphqlHTTP({
   schema: graphqlSchema,
