@@ -103,12 +103,14 @@ module.exports = {
       updatedAt: createdPost.updatedAt.toISOString()
     }
   },
-  posts: async (req) => {
+  posts: async (input,req) => {
+    console.log('RESOLVER1', req.isAuth)
     if(!req.isAuth){
       const error = new Error('Unauthorized, access denied')
       error.code = 401
       throw error
     }
+    console.log('RESOLVER')
     const totalPosts = await Post.find().countDocuments()
     const posts = await Post.find()
       .sort({ createdAt: -1 })

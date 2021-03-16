@@ -54,26 +54,55 @@ class Feed extends Component {
       page--;
       this.setState({ postPage: page });
     }
-    fetch('http://localhost:8080/feed/posts?page=' + page, {
+
+    const graphqlQuery = {
+      query: `
+        {
+          posts {
+            posts {
+              _id
+              title
+              content
+              creator {
+                name
+              }
+            }
+            totalPosts
+          }
+        }
+      `
+    }
+
+    fetch('http://localhost:8080/graphql', {
+      method: 'POST',
+      body: JSON.stringify(graphqlQuery),
       headers: {
-        Authorization: 'Bearer ' + this.props.token
+        Authorization: 'Bearer ' + this.props.token,
+        'Content-Type': 'application/json'
       }
     })
       .then(res => {
-        if (res.status !== 200) {
-          throw new Error('Failed to fetch posts.');
-        }
         return res.json();
       })
       .then(resData => {
+        const { errors, data: {posts: { posts, totalPosts }} } = resData
+        console.log(resData.data)
+        if (errors && errors[0].status === 422) {
+          throw new Error(
+            "Validation failed. Make sure the email address isn't used yet!"
+          );
+        }
+        if(errors){
+          throw new Error('something went wrong')
+        }
         this.setState({
-          posts: resData.posts.map(post => {
+          posts: posts.map(post => {
             return {
               ...post,
               imagePath: post.imageUrl
             };
           }),
-          totalPosts: resData.totalItems,
+          totalPosts: totalPosts,
           postsLoading: false
         });
       })
@@ -162,7 +191,9 @@ class Feed extends Component {
         console.log(res)
         return res.json();
       })
-      .then(({errors,  data: { createPost: { _id, title, content, creator: { name }, createdAt } } }) => {
+      .then((resData) => {
+        const {errors,  data: { createPost: { _id, title, content, creator: { name }, createdAt } } } = resData
+        console.log(resData)
         if (errors && errors[0].status === 422) {
           throw new Error(
             "Validation failed. Make sure the email address isn't used yet!"
@@ -179,7 +210,18 @@ class Feed extends Component {
           createdAt: createdAt
         };
         this.setState(prevState => {
+          let updatedPosts = [...prevState.posts];
+          if (prevState.editPost) {
+            const postIndex = prevState.posts.findIndex(
+              p => p._id === prevState.editPost._id
+            );
+            updatedPosts[postIndex] = post;
+          } else {
+            updatedPosts.pop();
+            updatedPosts.unshift(post);
+          }
           return {
+            posts: updatedPosts,
             isEditing: false,
             editPost: null,
             editLoading: false

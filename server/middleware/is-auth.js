@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
   const authHeader = req.get('Authorization');
-  
   if (!authHeader) {
     req.isAuth = false
     return next()
@@ -28,7 +27,7 @@ module.exports = (req, res, next) => {
     // error.statusCode = 401;
     // throw error;
   }
-  console.log('Request EXITS AUTH', token, decodedToken)
+  
   req.userId = decodedToken.userId;
   req.isAuth = true
   next();
