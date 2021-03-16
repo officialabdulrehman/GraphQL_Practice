@@ -58,28 +58,29 @@ class Feed extends Component {
     const graphqlQuery = {
       query: `
         {
-          posts {
+          posts(page: ${page}) {
             posts {
               _id
               title
               content
+              imageUrl
               creator {
                 name
               }
+              createdAt
             }
             totalPosts
           }
         }
       `
-    }
-
+    };
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
-      body: JSON.stringify(graphqlQuery),
       headers: {
         Authorization: 'Bearer ' + this.props.token,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
         return res.json();
@@ -154,45 +155,61 @@ class Feed extends Component {
 
   finishEditHandler = postData => {
     const { title, content } = postData
+    console.log(postData)
     this.setState({
       editLoading: true
     });
     const formData = new FormData();
-    formData.append('title', title);
-    formData.append('content', content);
-    formData.append('image', postData.image);
+    formData.append('image', postData.image, postData.image.name);
+    if(this.state.editPost)
+      formData.append('oldPath', this.state.editPost.imagePath)
 
-    let graphqlQuery = {
-      query: `
-        mutation {
-          createPost(postInput:{title: "${title}", content: "${content}", imageUrl: "no-url"}){
-            _id
-            title
-            content
-            imageUrl,
-            creator {
-              name
-            }
-            createdAt
-          }
-        }
-      `
-    }
-
-    fetch('http://localhost:8080/graphql', {
-      method: 'POST',
-      body: JSON.stringify(graphqlQuery),
+    fetch('http://localhost:8080/post-image', {
+      method: 'PUT',
+      body: formData,
       headers: {
         Authorization: 'Bearer ' + this.props.token,
-        'Content-Type': 'application/json'
+        // 'Content-Type': 'multipart/form-data'
       }
+    })
+    .then(res => res.json())
+    .then(resData => {
+      const {filePath} = resData
+      console.log(filePath, resData)
+      let newUrl = `${filePath.slice(0, 7)}${filePath.slice(6)}`
+      console.log(newUrl)
+      let graphqlQuery = {
+        query: `
+          mutation {
+            createPost(postInput:{title: "${title}", content: "${content}", imageUrl: "no-url"}){
+              _id
+              title
+              content
+              imageUrl,
+              creator {
+                name
+              }
+              createdAt
+            }
+          }
+        `,
+      };
+      
+      return fetch('http://localhost:8080/graphql', {
+        method: 'POST',
+        body: JSON.stringify(graphqlQuery),
+        headers: {
+          Authorization: 'Bearer ' + this.props.token,
+          'Content-Type': 'application/json'
+        }
+      })
     })
       .then(res => {
         console.log(res)
         return res.json();
       })
       .then((resData) => {
-        const {errors,  data: { createPost: { _id, title, content, creator: { name }, createdAt } } } = resData
+        const {errors,  data: { createPost: { _id, title, content, creator: { name }, createdAt, imageUrl } } } = resData
         console.log(resData)
         if (errors && errors[0].status === 422) {
           throw new Error(
@@ -203,11 +220,12 @@ class Feed extends Component {
           throw new Error('something went wrong')
         }
         const post = {
-          _id: _id,
-          title: title,
-          content: content,
+          _id,
+          title,
+          content,
           creator: name,
-          createdAt: createdAt
+          createdAt,
+          imagePath: imageUrl
         };
         this.setState(prevState => {
           let updatedPosts = [...prevState.posts];

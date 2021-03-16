@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -16,7 +17,7 @@ const fileStorage = multer.diskStorage({
     cb(null, 'images');
   },
   filename: (req, file, cb) => {
-    cb(null, new Date().toISOString() + '-' + file.originalname);
+    cb(null, Math.round(Math.random() * 1E9 ) + file.originalname);
   }
 });
 
@@ -33,7 +34,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 // app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
-app.use(bodyParser.json()); // application/json
+app.use(express.json()); // application/json
 app.use(
   multer({ storage: fileStorage, fileFilter: fileFilter }).single('image')
 );
@@ -52,6 +53,21 @@ app.use((req, res, next) => {
 });
 
 app.use(isAuth)
+
+app.put('/post-image', (req, res, next) => {
+  if(!isAuth){
+    const error = new Error('Unauthorized, access denied')
+    error.code = 401
+    throw error
+  }
+  if(!req.file) 
+    return res.status(200).json({ message: 'No file provided'})
+
+  if(req.body.oldPath)
+    clearImage(req.body.oldPath)
+
+  return res.status(201).json({ message: 'File Stored', filePath: req.file.path })
+})
 
 app.use('/graphql', graphqlHTTP({
   schema: graphqlSchema,
@@ -86,3 +102,10 @@ mongoose
     app.listen(8080);
   })
   .catch(err => console.log(err));
+
+
+const clearImage = filePath => {
+  filePath = path.join(__dirname, '..', filePath);
+  fs.unlink(filePath, err => console.log(err));
+};
+  
