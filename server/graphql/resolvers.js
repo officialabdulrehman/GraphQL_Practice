@@ -69,7 +69,6 @@ module.exports = {
       throw error
     }
     const errors = []
-    console.log('Request Entered 2')
     if(validator.isEmpty(title))
       errors.push({ message: 'Invalid Title'})
 
@@ -128,8 +127,8 @@ module.exports = {
         return {
           ...post._doc,
           _id: post._id.toString(),
-          createdAt: post.createdAt.toString(),
-          updatedAt: post.updatedAt.toString()
+          createdAt: post.createdAt.toISOString(),
+          updatedAt: post.updatedAt.toISOString()
         }
       }),
       totalPosts
@@ -151,8 +150,54 @@ module.exports = {
     return {
       ...post._doc,
       _id: post._id.toString(),
-      createdAt: post.createdAt.toString(),
-      updatedAt: post.updatedAt.toString()
+      createdAt: post.createdAt.toISOString(),
+      updatedAt: post.updatedAt.toISOString()
     }
-  }
+  },
+  post: async ({postId, postInputData}, req) => {
+    if(!req.isAuth){
+      const error = new Error('Unauthorized, access denied')
+      error.code = 401
+      throw error
+    }
+    console.log(postId)
+    const post = await Post.findById(postId).populate('creator')
+    if(!post){
+      const error = new Error('Post not found')
+      error.code = 404
+      throw error
+    }
+    if(post.creator._id.toString() !== req.userId.toString()) {
+      const error = new Error('Unauthorized access')
+      error.code = 403
+      throw error
+    }
+    
+    const {title, content, imageUrl} = postInputData
+
+    const errors = []
+    if(validator.isEmpty(title))
+      errors.push({ message: 'Invalid Title'})
+
+    if(validator.isEmpty(content))
+      errors.push({ message: 'Invalid Content'})
+
+    if(errors.length > 0){
+      const error = new Error('Invalid input')
+      error.data = errors
+      error.code = 422
+      throw error
+    }
+
+    post.title = title
+    post.content = content
+    const updatedPost = await post.save()
+    
+    return {
+      ...updatedPost._doc,
+      _id: updatedPost._id.toString(),
+      createdAt: updatedPost.createdAt.toISOString(),
+      updatedAt: updatedPost.updatedAt.toISOString()
+    }
+  },
 }
