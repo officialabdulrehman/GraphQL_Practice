@@ -38,7 +38,7 @@ module.exports = {
     return { ...createdUser._doc, _id: createdUser._id.toString() }
   },
 
-  login: async ({email, password}) => {
+  login: async ({email, password}, req) => {
     const user = await User.findOne({email})
     if(!user){
       const error = new Error('User not found')
@@ -222,5 +222,41 @@ module.exports = {
     user.posts.pull(postId)
     await user.save()
     return true
+  },
+  user: async ({}, req) => {
+    if(!req.isAuth){
+      const error = new Error('Unauthorized, access denied')
+      error.code = 401
+      throw error
+    }
+    const user = await User.findById(req.userId)
+    if(!user){
+      const error = new Error('User not found')
+      error.code = 404
+      throw error
+    }
+    return {
+      ...user._doc,
+      _id: user._id.toString()
+    }
+  },
+  updateStatus: async ({status}, req) => {
+    if(!req.isAuth){
+      const error = new Error('Unauthorized, access denied')
+      error.code = 401
+      throw error
+    }
+    const user = await User.findById(req.userId)
+    if(!user){
+      const error = new Error('User not found')
+      error.code = 404
+      throw error
+    }
+    user.status = status
+    await user.save()
+    return {
+      ...user._doc,
+      _id: user._id.toString()
+    }
   }
 }
