@@ -154,7 +154,7 @@ module.exports = {
       updatedAt: post.updatedAt.toISOString()
     }
   },
-  post: async ({postId, postInputData}, req) => {
+  post: async ({postId, postInput}, req) => {
     if(!req.isAuth){
       const error = new Error('Unauthorized, access denied')
       error.code = 401
@@ -173,7 +173,7 @@ module.exports = {
       throw error
     }
     
-    const {title, content, imageUrl} = postInputData
+    const {title, content, imageUrl} = postInput
 
     const errors = []
     if(validator.isEmpty(title))

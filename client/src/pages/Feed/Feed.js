@@ -160,7 +160,7 @@ class Feed extends Component {
       editLoading: true
     });
     const formData = new FormData();
-    formData.append('image', postData.image, postData.image.name);
+    formData.append('image', postData.image);
     if(this.state.editPost)
       formData.append('oldPath', this.state.editPost.imagePath)
 
@@ -176,25 +176,44 @@ class Feed extends Component {
     .then(resData => {
       const {filePath} = resData
       console.log(filePath, resData)
-      let newUrl = `${filePath.slice(0, 7)}${filePath.slice(6)}`
-      console.log(newUrl)
+      //let newUrl = `${filePath.slice(0, 7)}${filePath.slice(6)}`
+      //console.log(newUrl)
       let graphqlQuery = {
         query: `
-          mutation {
-            createPost(postInput:{title: "${title}", content: "${content}", imageUrl: "no-url"}){
-              _id
-              title
-              content
-              imageUrl,
-              creator {
-                name
-              }
-              createdAt
+        mutation {
+          createPost(postInput:{title: "${title}", content: "${content}", imageUrl: "no-url"}){
+            _id
+            title
+            content
+            imageUrl,
+            creator {
+              name
             }
+            createdAt
           }
-        `,
-      };
+        }
+        `
+      }
       
+      if(this.state.editPost){
+        graphqlQuery = {
+          query: `
+            mutation {
+              updatePost(postId: "${this.state.editPost._id}", postInput:{title: "${title}", content: "${content}", imageUrl: "no-url"}){
+                _id
+                title
+                content
+                imageUrl,
+                creator {
+                  name
+                }
+                createdAt
+              }
+            }
+          `
+        }
+      }
+
       return fetch('http://localhost:8080/graphql', {
         method: 'POST',
         body: JSON.stringify(graphqlQuery),
@@ -210,6 +229,7 @@ class Feed extends Component {
       })
       .then((resData) => {
         const {errors,  data: { createPost: { _id, title, content, creator: { name }, createdAt, imageUrl } } } = resData
+        
         console.log(resData)
         if (errors && errors[0].status === 422) {
           throw new Error(
@@ -219,7 +239,19 @@ class Feed extends Component {
         if(errors){
           throw new Error('something went wrong')
         }
-        const post = {
+        const post = {}
+        if(this.state.editPost){
+          const {data: { updatedPost: { _id, title, content, creator: { name }, createdAt, imageUrl } } } = resData
+          post = {
+            _id,
+            title,
+            content,
+            creator: name,
+            createdAt,
+            imagePath: imageUrl
+          };
+        }
+        post = {
           _id,
           title,
           content,
