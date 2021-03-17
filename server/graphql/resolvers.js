@@ -154,7 +154,7 @@ module.exports = {
       updatedAt: post.updatedAt.toISOString()
     }
   },
-  post: async ({postId, postInput}, req) => {
+  updatePost: async ({postId, postInput}, req) => {
     if(!req.isAuth){
       const error = new Error('Unauthorized, access denied')
       error.code = 401
@@ -200,4 +200,27 @@ module.exports = {
       updatedAt: updatedPost.updatedAt.toISOString()
     }
   },
+  deletePost: async ({postId}, req) => {
+    if(!req.isAuth){
+      const error = new Error('Unauthorized, access denied')
+      error.code = 401
+      throw error
+    }
+    const post = await Post.findById(postId)
+    if(!post){
+      const error = new Error('Post not found')
+      error.code = 404
+      throw error
+    }
+    if(post.creator.toString() !== req.userId.toString()) {
+      const error = new Error('Unauthorized access')
+      error.code = 403
+      throw error
+    }
+    await Post.findByIdAndDelete(postId)
+    const user = await User.findById(req.userId)
+    user.posts.pull(postId)
+    await user.save()
+    return true
+  }
 }
