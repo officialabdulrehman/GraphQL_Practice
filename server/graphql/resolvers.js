@@ -103,7 +103,9 @@ module.exports = {
       updatedAt: createdPost.updatedAt.toISOString()
     }
   },
-  posts: async ({page},req) => {
+  posts: async (args ,req) => {
+    console.log(args)
+    const { page } = args
     if(!req.isAuth){
       const error = new Error('Unauthorized, access denied')
       error.code = 401

@@ -67,6 +67,28 @@ class Feed extends Component {
       this.setState({ postPage: page });
     }
 
+    // const graphqlQuery = {
+    //   query: `
+    //     query FetchPosts($page: Int){
+    //       posts(page: $page) {
+    //         posts {
+    //           _id
+    //           title
+    //           content
+    //           imageUrl
+    //           creator {
+    //             name
+    //           }
+    //           createdAt
+    //         }
+    //         totalPosts
+    //       }
+    //     }
+    //   `,
+    //   variables: {
+    //     page
+    //   }
+    // };
     const graphqlQuery = {
       query: `
         {
@@ -84,8 +106,8 @@ class Feed extends Component {
             totalPosts
           }
         }
-      `
-    };
+      `,
+    }
     fetch('http://localhost:8080/graphql', {
       method: 'POST',
       headers: {
@@ -258,7 +280,7 @@ class Feed extends Component {
         if(errors){
           throw new Error('something went wrong')
         }
-        const post = {}
+        let post = {}
         if(this.state.editPost){
           const {data: { updatedPost: { _id, title, content, creator: { name }, createdAt, imageUrl } } } = resData
           post = {
@@ -280,13 +302,16 @@ class Feed extends Component {
         };
         this.setState(prevState => {
           let updatedPosts = [...prevState.posts];
+          let updatedTotalPosts = prevState.totalPosts
           if (prevState.editPost) {
             const postIndex = prevState.posts.findIndex(
               p => p._id === prevState.editPost._id
             );
             updatedPosts[postIndex] = post;
           } else {
-            updatedPosts.pop();
+            updatedTotalPosts++
+            if(prevState.posts.length >= 2)
+              updatedPosts.pop();
             updatedPosts.unshift(post);
           }
           return {
@@ -303,7 +328,8 @@ class Feed extends Component {
           isEditing: false,
           editPost: null,
           editLoading: false,
-          error: err
+          error: err,
+          totalPosts: updatedTotalPosts
         });
       });
   };
